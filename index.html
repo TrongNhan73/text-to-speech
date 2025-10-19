@@ -1,660 +1,344 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Gemini TTS — EN/JA with Voices</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ElevenLabs TTS Web App</title>
     <style>
-      :root {
-        --bg: #0f1220;
-        --card: #171a2a;
-        --muted: #8b93b0;
-        --text: #eaf0ff;
-        --accent: #6aa8ff;
-        --accent2: #73f0b8;
-        --warn: #ffb86c;
-        --err: #ff7a9a;
-        --ok: #73f0b8;
-        --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-        --radius: 16px;
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f4f4f4;
       }
-      * {
+      .container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 10px;
+        margin: 5px 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
         box-sizing: border-box;
       }
-      body {
-        margin: 0;
-        background: radial-gradient(
-              1200px 600px at 75% -10%,
-              #1f2450 0%,
-              #0f1220 60%
-            )
-            no-repeat,
-          var(--bg);
-        color: var(--text);
-        font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      }
-      .wrap {
-        max-width: 980px;
-        margin: 40px auto;
-        padding: 0 16px;
-      }
-      header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 18px;
-      }
-      .title {
-        font-weight: 700;
-        letter-spacing: 0.3px;
-        font-size: 20px;
-      }
-      a {
-        color: #8ecbff;
-      }
-      .card {
-        background: linear-gradient(180deg, #1a1f37 0, #14182b 100%);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        padding: 20px;
-      }
-      .grid {
-        display: grid;
-        gap: 14px;
-      }
-      @media (min-width: 900px) {
-        .grid.cols-2 {
-          grid-template-columns: 1fr 1fr;
-        }
-        .grid.cols-3 {
-          grid-template-columns: 1fr 1fr 1fr;
-        }
-      }
-      label {
-        display: block;
-        font-size: 13px;
-        color: var(--muted);
-        margin: 0 0 6px 2px;
-      }
-      input[type="text"],
-      textarea,
-      select {
-        width: 100%;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        background: #0f1325;
-        color: var(--text);
-        padding: 12px 14px;
-        outline: none;
-        transition: border 0.2s, box-shadow 0.2s;
-      }
-      textarea {
-        min-height: 160px;
-        resize: vertical;
-      }
-      input:focus,
-      textarea:focus,
-      select:focus {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
-      }
-      .row {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      .btn {
-        appearance: none;
+      input[type="password"] {
+        font-family: monospace;
+      } /* Ẩn key */
+      button {
+        background: #007bff;
+        color: white;
+        padding: 10px 15px;
         border: none;
+        border-radius: 4px;
         cursor: pointer;
-        padding: 12px 16px;
-        border-radius: 12px;
-        font-weight: 600;
-        letter-spacing: 0.2px;
-        color: #0a0d1a;
-        background: linear-gradient(135deg, var(--accent), var(--accent2));
-        transition: transform 0.03s ease, filter 0.2s;
-        box-shadow: 0 8px 24px rgba(80, 180, 255, 0.25);
+        margin: 5px;
       }
-      .btn:active {
-        transform: scale(0.98);
+      button:hover {
+        background: #0056b3;
       }
-      .btn[disabled] {
-        opacity: 0.6;
+      button:disabled {
+        background: #ccc;
         cursor: not-allowed;
-        filter: grayscale(0.2);
       }
-      .btn.secondary {
-        background: #20264b;
-        color: #e7edff;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      .tiny {
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .footer {
-        margin-top: 14px;
-        color: var(--muted);
-        font-size: 13px;
-      }
-      .result {
-        margin-top: 16px;
-        display: grid;
-        gap: 12px;
-      }
-      audio {
+      #audio-player {
         width: 100%;
+        margin: 10px 0;
+      }
+      #logs {
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        padding: 10px;
+        height: 200px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        font-family: monospace;
+        font-size: 12px;
       }
       .error {
-        padding: 12px 14px;
-        border-radius: 10px;
-        background: #2a1430;
-        color: #ffd7e1;
-        border: 1px solid #5a244d;
+        color: red;
       }
-      .ok {
-        padding: 10px 12px;
-        border-left: 3px solid var(--ok);
-        background: #0e1530;
-        color: #cfe9ff;
-        border-radius: 8px;
+      .success {
+        color: green;
       }
-
-      /* Segmented control (Language) */
-      .seg {
-        display: inline-flex;
-        border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: #0f1325;
-      }
-      .seg input {
-        display: none;
-      }
-      .seg label {
-        margin: 0;
-        padding: 8px 12px;
-        cursor: pointer;
-        color: #c9d6ff;
-      }
-      .seg input:checked + label {
-        background: #223065;
-        color: #fff;
-        font-weight: 600;
-      }
-
-      /* Progress / Spinner */
-      .progress {
-        display: flex;
-        align-items: center;
-        gap: 12px;
+      label {
+        font-weight: bold;
+        display: block;
         margin-top: 10px;
       }
-      .bar {
-        flex: 1;
-        height: 8px;
-        background: #1b2346;
-        border-radius: 999px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+      #message {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px;
+        border-radius: 4px;
+        color: white;
+        z-index: 1000;
+        max-width: 400px;
+        text-align: center;
+        display: none;
       }
-      .bar > div {
-        height: 100%;
-        width: 0%;
-        background: linear-gradient(90deg, var(--accent), var(--accent2));
-        transition: width 0.3s ease;
+      #message.success {
+        background: #28a745;
       }
-      .spin {
-        width: 18px;
-        height: 18px;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        border-top-color: #9fd3ff;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
+      #message.error {
+        background: #dc3545;
       }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+      #message.info {
+        background: #17a2b8;
       }
-      .sr-only {
-        position: absolute;
-        left: -9999px;
+      #message button {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        float: right;
+        font-size: 18px;
+        margin-left: 10px;
+      }
+      .voice-link {
+        color: #007bff;
+        text-decoration: none;
+        font-size: 14px;
+        margin-left: 10px;
+      }
+      .voice-link:hover {
+        text-decoration: underline;
       }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <header>
-        <div class="title">Gemini Text → Speech (Voices • EN/JA/Auto)</div>
-        <div class="tiny">
-          Pure HTML/CSS/JS · API key stored in your browser
-        </div>
-      </header>
+    <div id="message">
+      <button onclick="hideMessage()">&times;</button>
+      <span id="message-text"></span>
+    </div>
 
-      <div class="card">
-        <div class="grid cols-2">
-          <div>
-            <label for="apiKey">Gemini API Key</label>
-            <input
-              id="apiKey"
-              type="text"
-              placeholder="Paste your API key here"
-              autocomplete="off"
-            />
-            <div class="tiny">
-              Saved to <code>localStorage</code>. You can edit directly anytime.
-            </div>
-          </div>
+    <div class="container">
+      <h1>ElevenLabs TTS Web App</h1>
 
-          <div>
-            <label for="voice">Voice</label>
-            <div class="row" style="align-items: stretch">
-              <select id="voice">
-                <!-- Popular preview voices (you can add more or rename if docs update) -->
-                <option value="Zephyr" selected>
-                  Zephyr - Sáng, Cao giọng
-                </option>
-                <option value="Puck">Puck - Vui tươi, Trung giọng</option>
-                <option value="Charon">
-                  Charon - Thông tin rõ ràng, Trầm giọng
-                </option>
-                <option value="Kore">Kore - Cứng cáp, Trung giọng</option>
-                <option value="Fenrir">Fenrir - Hào hứng, Hơi trầm</option>
-                <option value="Leda">Leda - Trẻ trung, Cao giọng</option>
-                <option value="Orus">Orus - Cứng cáp, Hơi trầm</option>
-                <option value="Aoede">Aoede - Nhẹ nhàng, Trung giọng</option>
-                <option value="Callirrhoe">
-                  Callirrhoe - Dễ chịu, Trung giọng
-                </option>
-                <option value="Autonoe">Autonoe - Sáng, Trung giọng</option>
-                <option value="Enceladus">
-                  Enceladus - Thở nhẹ, Trầm giọng
-                </option>
-                <option value="Iapetus">Iapetus - Rõ ràng, Hơi trầm</option>
-                <option value="Umbriel">Umbriel - Dễ chịu, Hơi trầm</option>
-                <option value="Algieba">Algieba - Mượt mà, Trầm giọng</option>
-                <option value="Despina">Despina - Mượt mà, Trung giọng</option>
-                <option value="Erinome">Erinome - Rõ ràng, Trung giọng</option>
-                <option value="Algenib">Algenib - Khàn khàn, Trầm giọng</option>
-                <option value="Rasalgethi">
-                  Rasalgethi - Thông tin rõ ràng, Trung giọng
-                </option>
-                <option value="Laomedeia">
-                  Laomedeia - Vui tươi, Cao giọng
-                </option>
-                <option value="Achernar">
-                  Achernar - Nhẹ nhàng, Cao giọng
-                </option>
-                <option value="Alnilam">Alnilam - Cứng cáp, Hơi trầm</option>
-                <option value="Schedar">Schedar - Ổn định, Hơi trầm</option>
-                <option value="Gacrux">
-                  Gacrux - Trưởng thành, Trung giọng
-                </option>
-                <option value="Pulcherrima">
-                  Pulcherrima - Thẳng thắn, Trung giọng
-                </option>
-                <option value="Achird">Achird - Thân thiện, Hơi trầm</option>
-                <option value="Zubenelgenubi">
-                  Zubenelgenubi - Thoải mái, Hơi trầm
-                </option>
-                <option value="Vindemiatrix">
-                  Vindemiatrix - Dịu dàng, Trung giọng
-                </option>
-                <option value="Sadachbia">
-                  Sadachbia - Sôi nổi, Trầm giọng
-                </option>
-                <option value="Sadaltager">
-                  Sadaltager - Hiểu biết, Trung giọng
-                </option>
-                <option value="Sulafat">Sulafat - Ấm áp, Trung giọng</option>
-              </select>
-              <input
-                id="voiceCustom"
-                type="text"
-                placeholder="Enter custom voice name"
-                style="display: none; min-width: 220px"
-              />
-            </div>
-            <div class="tiny">
-              Choose a built-in voice or select “Custom…” and type another
-              supported voice.
-            </div>
-          </div>
+      <label for="api-key">API Key:</label>
+      <input
+        type="password"
+        id="api-key"
+        placeholder="Nhập API key của ElevenLabs"
+      />
 
-          <div style="grid-column: 1 / -1">
-            <label for="textIn">Text</label>
-            <textarea
-              id="textIn"
-              placeholder="Type English or Japanese here..."
-            ></textarea>
-            <div class="tiny">
-              Tip: keep sentences natural. You can still guide tone (“friendly,
-              teaching pace”) in your text.
-            </div>
-          </div>
+      <label for="voice-id">Voice ID:</label>
+      <input
+        type="text"
+        id="voice-id"
+        placeholder="Ví dụ: 21m00Tcm4TlvDq8ikWAM"
+        value="21m00Tcm4TlvDq8ikWAM"
+      />
+      <a
+        href="https://elevenlabs.io/app/voice-library"
+        target="_blank"
+        class="voice-link"
+        >Lấy Voice ID từ Voice Library</a
+      >
 
-          <div>
-            <label>Language Mode</label>
-            <div class="seg" role="tablist" aria-label="Language hint">
-              <input
-                type="radio"
-                name="lang"
-                id="lang-auto"
-                value="auto"
-                checked
-              />
-              <label for="lang-auto" role="tab" aria-controls="none"
-                >Auto</label
-              >
-              <input type="radio" name="lang" id="lang-en" value="en" />
-              <label for="lang-en" role="tab" aria-controls="en">English</label>
-              <input type="radio" name="lang" id="lang-ja" value="ja" />
-              <label for="lang-ja" role="tab" aria-controls="ja">日本語</label>
-            </div>
-            <div class="tiny">
-              Auto = không gửi gợi ý ngôn ngữ vào API (để model tự nhận diện).
-            </div>
-          </div>
+      <label for="text-input">Text to Speech:</label>
+      <textarea
+        id="text-input"
+        rows="4"
+        placeholder="Nhập văn bản cần đọc..."
+      ></textarea>
 
-          <div
-            class="row"
-            style="align-items: flex-end; justify-content: flex-start"
-          >
-            <button id="genBtn" class="btn">Generate</button>
-            <button id="cancelBtn" class="btn secondary" disabled>
-              Cancel
-            </button>
-          </div>
-        </div>
-
-        <div id="statusArea" class="footer" aria-live="polite"></div>
-
-        <div id="result" class="result" hidden>
-          <div class="ok" id="okMsg">Audio ready.</div>
-          <audio id="player" controls></audio>
-          <div class="row">
-            <a id="download" class="btn" download="tts.wav">Download WAV</a>
-            <div class="tiny">Sample rate 24 kHz, mono, 16-bit PCM WAV.</div>
-          </div>
-        </div>
+      <div>
+        <button onclick="generateAudio()">Generate Audio</button>
+        <button onclick="saveAudio()" id="save-btn" disabled>Save Audio</button>
+        <button onclick="clearLogs()">Clear Logs</button>
       </div>
 
+      <audio id="audio-player" controls style="display: none"></audio>
+
+      <label>Logs:</label>
+      <div id="logs"></div>
     </div>
 
     <script>
-      (() => {
-        const KEY_STORE = "gemini_api_key";
-        const apiKeyEl = document.getElementById("apiKey");
-        const textEl = document.getElementById("textIn");
-        const voiceSel = document.getElementById("voice");
-        const voiceCustom = document.getElementById("voiceCustom");
-        const genBtn = document.getElementById("genBtn");
-        const cancelBtn = document.getElementById("cancelBtn");
-        const statusArea = document.getElementById("statusArea");
-        const resultEl = document.getElementById("result");
-        const okMsg = document.getElementById("okMsg");
-        const player = document.getElementById("player");
-        const downloadA = document.getElementById("download");
+      let audioBlob = null; // Lưu Blob audio
+      const CONFIG_KEYS = {
+        apiKey: "elevenlabs_api_key",
+        voiceId: "elevenlabs_voice_id",
+      };
+      const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+      const API_URL = "https://api.elevenlabs.io/v1/text-to-speech/";
 
-        let aborter = null;
+      // Hiển thị thông báo tùy chỉnh
+      function showMessage(text, type = "info") {
+        const messageDiv = document.getElementById("message");
+        const messageText = document.getElementById("message-text");
+        messageText.textContent = text;
+        messageDiv.className = type; // success, error, info
+        messageDiv.style.display = "block";
+        setTimeout(hideMessage, 3000); // Tự ẩn sau 3 giây
+      }
 
-        // Load & persist API key
-        const saved = localStorage.getItem(KEY_STORE);
-        if (saved) apiKeyEl.value = saved;
-        apiKeyEl.addEventListener("input", () => {
-          localStorage.setItem(KEY_STORE, apiKeyEl.value.trim());
-        });
+      function hideMessage() {
+        document.getElementById("message").style.display = "none";
+      }
 
-        // Voice selector: show custom input when selected
-        voiceSel.addEventListener("change", () => {
-          const v = voiceSel.value;
-          voiceCustom.style.display = v === "Custom" ? "" : "none";
-          if (v === "Custom") voiceCustom.focus();
-        });
+      // Load settings từ localStorage
+      function loadSettings() {
+        const apiKey = localStorage.getItem(CONFIG_KEYS.apiKey) || "";
+        const voiceId =
+          localStorage.getItem(CONFIG_KEYS.voiceId) || DEFAULT_VOICE_ID;
+        document.getElementById("api-key").value = apiKey;
+        document.getElementById("voice-id").value = voiceId;
+        logMessage("INFO: Đã load settings từ localStorage.");
+      }
 
-        // Language mode getter
-        function getLangMode() {
-          const checked = document.querySelector('input[name="lang"]:checked');
-          return checked ? checked.value : "auto";
-        }
+      // Lưu settings vào localStorage (ngầm, chỉ log)
+      function saveSettings() {
+        const apiKey = document.getElementById("api-key").value.trim();
+        const voiceId = document.getElementById("voice-id").value.trim();
+        localStorage.setItem(CONFIG_KEYS.apiKey, apiKey);
+        localStorage.setItem(CONFIG_KEYS.voiceId, voiceId);
+        logMessage("INFO: Đã lưu settings ngầm vào localStorage.");
+      }
 
-        // UI helpers
-        function setBusy(busy) {
-          genBtn.disabled = !!busy;
-          cancelBtn.disabled = !busy;
-          if (busy) {
-            showProgress("Sending request…", 12);
-          } else {
-            hideProgress();
-          }
-        }
-        function showError(msg) {
-          statusArea.innerHTML = `<div class="error">${escapeHtml(msg)}</div>`;
-        }
-        function clearStatus() {
-          statusArea.innerHTML = "";
-        }
+      // Generate audio qua API
+      async function generateAudio() {
+        const apiKey = document.getElementById("api-key").value.trim();
+        const voiceId = document.getElementById("voice-id").value.trim();
+        const text = document.getElementById("text-input").value.trim();
 
-        function showProgress(stepText, pct) {
-          const existing = document.getElementById("progressWrap");
-          if (!existing) {
-            statusArea.innerHTML = `
-        <div id="progressWrap" class="ok" style="border-left-color:#6aa8ff">
-          <div class="row"><div class="spin" aria-hidden="true"></div>
-            <div id="progText">${escapeHtml(stepText)}</div>
-          </div>
-          <div class="progress"><div class="bar"><div id="progBar"></div></div></div>
-          <span class="sr-only" id="srProg">Progress</span>
-        </div>`;
-          } else {
-            document.getElementById("progText").textContent = stepText;
-          }
-          const bar = document.getElementById("progBar");
-          if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + "%";
-        }
-        function bumpProgress(stepText, pct) {
-          showProgress(stepText, pct);
-        }
-        function hideProgress() {
-          const wrap = document.getElementById("progressWrap");
-          if (wrap) wrap.remove();
-        }
-
-        function escapeHtml(s) {
-          return s.replace(
-            /[&<>"']/g,
-            (m) =>
-              ({
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': "&quot;",
-                "'": "&#039;",
-              }[m])
+        if (!apiKey || !voiceId || !text) {
+          showMessage(
+            "Vui lòng nhập đầy đủ API Key, Voice ID và Text.",
+            "error"
           );
+          logMessage("ERROR: Thiếu thông tin đầu vào.");
+          return;
         }
 
-        // PCM (16-bit LE, mono, 24k) -> WAV
-        function pcm16ToWavBlob(pcmBytes, sampleRate = 24000, channels = 1) {
-          const bytesPerSample = 2;
-          const blockAlign = channels * bytesPerSample;
-          const byteRate = sampleRate * blockAlign;
-          const dataSize = pcmBytes.byteLength;
-          const header = new ArrayBuffer(44);
-          const v = new DataView(header);
+        // Lưu settings ngầm trước khi gọi
+        saveSettings();
 
-          writeStr(v, 0, "RIFF");
-          v.setUint32(4, 36 + dataSize, true);
-          writeStr(v, 8, "WAVE");
+        logMessage("INFO: Bắt đầu gọi API ElevenLabs...");
+        document.getElementById("save-btn").disabled = true;
 
-          writeStr(v, 12, "fmt ");
-          v.setUint32(16, 16, true);
-          v.setUint16(20, 1, true);
-          v.setUint16(22, channels, true);
-          v.setUint32(24, sampleRate, true);
-          v.setUint32(28, byteRate, true);
-          v.setUint16(32, blockAlign, true);
-          v.setUint16(34, bytesPerSample * 8, true);
-
-          writeStr(v, 36, "data");
-          v.setUint32(40, dataSize, true);
-
-          const wav = new Uint8Array(44 + dataSize);
-          wav.set(new Uint8Array(header), 0);
-          wav.set(new Uint8Array(pcmBytes), 44);
-          return new Blob([wav], { type: "audio/wav" });
-
-          function writeStr(dv, off, s) {
-            for (let i = 0; i < s.length; i++)
-              dv.setUint8(off + i, s.charCodeAt(i));
-          }
-        }
-        function b64ToBytes(b64) {
-          const bin = atob(b64);
-          const buf = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-          return buf.buffer;
-        }
-
-        async function generate() {
-          const key = apiKeyEl.value.trim();
-          const text = textEl.value.trim();
-          const lang = getLangMode();
-
-          let voiceName = voiceSel.value;
-          if (voiceName === "Custom") {
-            voiceName = voiceCustom.value.trim();
-            if (!voiceName) {
-              showError(
-                "Please enter a custom voice name or choose a preset voice."
-              );
-              return;
-            }
-          }
-
-          if (!key) {
-            showError("Please paste your Gemini API key.");
-            return;
-          }
-          if (!text) {
-            showError("Please enter some text to synthesize.");
-            return;
-          }
-
-          // Prepare request
-          // Language hint is OPTIONAL — omit completely if "auto"
-          let hint = "";
-          if (lang === "en") {
-            hint =
-              "In natural, clear American English suited for teaching, read the following text exactly as written.";
-          } else if (lang === "ja") {
-            hint =
-              "自然で明瞭、学習向けの日本語で、以下の文章をそのまま読み上げてください。";
-          }
-
-          const parts = [];
-          if (hint) parts.push({ text: hint + "\n\n---" });
-          parts.push({ text });
-
-          const body = {
-            model: "gemini-2.5-flash-preview-tts",
-            contents: [{ parts }],
-            generationConfig: {
-              responseModalities: ["AUDIO"],
-              speechConfig: {
-                voiceConfig: { prebuiltVoiceConfig: { voiceName } },
-              },
+        try {
+          const response = await fetch(`${API_URL}${voiceId}`, {
+            method: "POST",
+            headers: {
+              Accept: "audio/mpeg",
+              "xi-api-key": apiKey,
+              "Content-Type": "application/json",
             },
-          };
+            body: JSON.stringify({
+              text: text,
+              model_id: "eleven_v3",
+              voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+            }),
+          });
 
-          // Request lifecycle UI
-          resultEl.hidden = true;
-          clearStatus();
-          setBusy(true);
-          bumpProgress("Sending request…", 12);
-
-          aborter = new AbortController();
-          try {
-            const res = await fetch(
-              "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "x-goog-api-key": key,
-                },
-                body: JSON.stringify(body),
-                signal: aborter.signal,
-              }
-            );
-
-            bumpProgress("Generating audio…", 48);
-
-            if (!res.ok) {
-              let errTxt = `API error (${res.status}).`;
-              try {
-                const j = await res.json();
-                if (j?.error?.message) errTxt = j.error.message;
-              } catch (_) {}
-              if (res.status === 401)
-                errTxt = "Invalid API key or not authorized.";
-              if (res.status === 429)
-                errTxt = "Rate limit or daily quota exceeded.";
-              throw new Error(errTxt);
-            }
-
-            bumpProgress("Receiving response…", 72);
-            const data = await res.json();
-
-            const base64 =
-              data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-            if (!base64) throw new Error("No audio returned by the model.");
-
-            bumpProgress("Preparing WAV file…", 92);
-            const pcm = b64ToBytes(base64); // 16-bit PCM, 24kHz, mono (as documented)
-            const wavBlob = pcm16ToWavBlob(pcm, 24000, 1);
-            const url = URL.createObjectURL(wavBlob);
-
-            player.src = url;
-            downloadA.href = url;
-            const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-            downloadA.download = `tts-${lang}-${voiceName}-${stamp}.wav`;
-
-            okMsg.textContent = `Audio ready (${voiceName}). Press play or download.`;
-            resultEl.hidden = false;
-
-            bumpProgress("Done.", 100);
-            setTimeout(hideProgress, 600);
-          } catch (err) {
-            if (err.name === "AbortError") {
-              showError("Request canceled.");
-            } else {
-              showError(String(err.message || err));
-            }
-          } finally {
-            setBusy(false);
-            aborter = null;
+          // Xử lý lỗi quota/rate limit
+          if (response.status === 402) {
+            const errorMsg =
+              "Hết credit! Vui lòng cập nhật API key hoặc kiểm tra quota tại elevenlabs.io.";
+            logMessage(`ERROR: ${errorMsg} (Mã lỗi: 402 Payment Required)`);
+            showMessage(errorMsg, "error");
+            return;
+          } else if (response.status === 429) {
+            const errorMsg = "Rate limit exceeded! Đợi một lúc rồi thử lại.";
+            logMessage(`ERROR: ${errorMsg} (Mã lỗi: 429)`);
+            showMessage(errorMsg, "error");
+            return;
           }
+
+          if (!response.ok) {
+            let errorDetail = "";
+            try {
+              const errorJson = await response.json();
+              if (errorJson.error === "quota_exceeded") {
+                errorDetail = `Quota exceeded! Hết credit. Chi tiết: ${
+                  errorJson.message || "N/A"
+                }`;
+              } else {
+                errorDetail = JSON.stringify(errorJson);
+              }
+            } catch {
+              errorDetail = await response.text();
+            }
+            logMessage(`ERROR: Lỗi API - ${response.status}: ${errorDetail}`);
+            showMessage(
+              `Lỗi API (${response.status}): ${errorDetail}`,
+              "error"
+            );
+            return;
+          }
+
+          // Lấy audio Blob
+          audioBlob = await response.blob();
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audioPlayer = document.getElementById("audio-player");
+          audioPlayer.src = audioUrl;
+          audioPlayer.style.display = "block";
+          document.getElementById("save-btn").disabled = false;
+
+          logMessage("INFO: Tạo audio thành công. Sử dụng player để nghe.");
+          showMessage(
+            "Audio được tạo thành công! Sử dụng player để nghe.",
+            "success"
+          );
+        } catch (error) {
+          logMessage(
+            `ERROR: Lỗi kết nối - ${error.message} (Kiểm tra mạng hoặc API key)`
+          );
+          showMessage(`Lỗi kết nối: ${error.message}`, "error");
+        }
+      }
+
+      // Save audio
+      function saveAudio() {
+        if (!audioBlob) {
+          showMessage("Chưa có audio để lưu. Hãy Generate trước.", "error");
+          return;
         }
 
-        genBtn.addEventListener("click", generate);
+        const url = URL.createObjectURL(audioBlob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "output.mp3"; // Tên file mặc định
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
 
-        cancelBtn.addEventListener("click", () => {
-          if (aborter) {
-            aborter.abort();
-            setBusy(false);
-          }
-        });
+        logMessage("INFO: Đã tải audio về (output.mp3)");
+        showMessage("Audio đã lưu thành công!", "success");
+      }
 
-        // Demo text
-        textEl.value = `Hello! This is a short test for natural, clear teaching audio.
-こんにちは。自然で聞き取りやすい日本語の読み上げテストです。`;
-      })();
+      // Log message vào #logs
+      function logMessage(msg, type = "info") {
+        const logsDiv = document.getElementById("logs");
+        const timestamp = new Date().toLocaleString("vi-VN");
+        const entry = `[${timestamp}] ${msg}\n`;
+        logsDiv.textContent += entry;
+        logsDiv.scrollTop = logsDiv.scrollHeight;
+        console.log(`[${type.toUpperCase()}] ${msg}`);
+        if (type === "error") logsDiv.classList.add("error");
+      }
+
+      // Clear logs
+      function clearLogs() {
+        document.getElementById("logs").textContent = "";
+        logMessage("INFO: Đã xóa logs.");
+      }
+
+      // Khởi tạo khi load trang
+      window.onload = function () {
+        loadSettings();
+        logMessage("INFO: App đã khởi động.");
+      };
     </script>
   </body>
 </html>
