@@ -19,7 +19,8 @@
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       }
       input,
-      textarea {
+      textarea,
+      #apikey-file {
         width: 100%;
         padding: 10px;
         margin: 5px 0;
@@ -30,6 +31,9 @@
       input[type="password"] {
         font-family: monospace;
       } /* Ẩn key */
+      input[type="file"] {
+        padding: 5px;
+      }
       button {
         background: #007bff;
         color: white;
@@ -46,7 +50,8 @@
         background: #ccc;
         cursor: not-allowed;
       }
-      #audio-player {
+      #audio-player,
+      .multi-audio {
         width: 100%;
         margin: 10px 0;
       }
@@ -111,6 +116,58 @@
       .voice-link:hover {
         text-decoration: underline;
       }
+      #multi-audios {
+        margin-top: 20px;
+      }
+      .multi-segment {
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+      .multi-segment button {
+        margin: 5px;
+        background: #28a745;
+      }
+      .multi-segment button:hover {
+        background: #218838;
+      }
+      #download-all {
+        background: #ffc107;
+        color: #000;
+      }
+      #download-all:hover {
+        background: #e0a800;
+      }
+      #single-audio {
+        display: block;
+      }
+      #multi-audios.hidden,
+      #single-audio.hidden {
+        display: none;
+      }
+      .mode-section {
+        margin: 10px 0;
+      }
+      .mode-inputs {
+        display: none;
+      }
+      .mode-inputs.active {
+        display: block;
+      }
+      .voice-inputs {
+        display: none;
+      }
+      .voice-inputs.active {
+        display: block;
+      }
+      .mode-radio {
+        margin: 5px;
+        padding: 5px 10px;
+      }
+      .mode-radio input[type="radio"] {
+        margin-right: 5px;
+      }
     </style>
   </head>
   <body>
@@ -122,54 +179,112 @@
     <div class="container">
       <h1>ElevenLabs TTS Web App</h1>
 
-      <label for="api-key">API Key:</label>
+      <label>Chọn Mode:</label>
+      <div class="mode-section">
+        <label class="mode-radio">
+          <input type="radio" name="tts-mode" value="single" checked /> Single
+          Voice
+        </label>
+        <label class="mode-radio">
+          <input type="radio" name="tts-mode" value="multi" /> Two Voices (Po &
+          Nana)
+        </label>
+      </div>
+
+      <label for="api-key">API Key (Single, fallback):</label>
       <input
         type="password"
         id="api-key"
-        placeholder="Nhập API key của ElevenLabs"
+        placeholder="Nhập API key đơn nếu không dùng file multi-key"
       />
 
-      <label for="voice-id">Voice ID:</label>
+      <label for="apikey-file">API Keys TXT File (Multi-key support):</label>
       <input
-        type="text"
-        id="voice-id"
-        placeholder="Ví dụ: 21m00Tcm4TlvDq8ikWAM"
-        value="21m00Tcm4TlvDq8ikWAM"
+        type="file"
+        id="apikey-file"
+        accept=".txt"
+        placeholder="Chọn file TXT với API keys (mỗi key một dòng)"
       />
-      <a
-        href="https://elevenlabs.io/app/voice-library"
-        target="_blank"
-        class="voice-link"
-        >Lấy Voice ID từ Voice Library</a
-      >
+
+      <div id="single-mode-inputs" class="mode-inputs active">
+        <label for="voice-id">Default Voice ID:</label>
+        <input
+          type="text"
+          id="voice-id"
+          placeholder="Ví dụ: 21m00Tcm4TlvDq8ikWAM"
+          value="21m00Tcm4TlvDq8ikWAM"
+        />
+        <a
+          href="https://elevenlabs.io/app/voice-library"
+          target="_blank"
+          class="voice-link"
+          >Lấy Voice ID từ Voice Library</a
+        >
+      </div>
+
+      <div id="multi-mode-inputs" class="mode-inputs">
+        <label for="voice-po">Po Voice ID:</label>
+        <input
+          type="text"
+          id="voice-po"
+          placeholder="Nhập Voice ID cho Po"
+          value="21m00Tcm4TlvDq8ikWAM"
+        />
+
+        <label for="voice-nana">Nana Voice ID:</label>
+        <input
+          type="text"
+          id="voice-nana"
+          placeholder="Nhập Voice ID cho Nana"
+          value="21m00Tcm4TlvDq8ikWAM"
+        />
+      </div>
 
       <label for="text-input">Text to Speech:</label>
       <textarea
         id="text-input"
         rows="4"
-        placeholder="Nhập văn bản cần đọc..."
+        placeholder='Single: "Nhập văn bản cần đọc..."\nMulti: "Po: こんにちは;Nana: こんにちは"'
       ></textarea>
 
       <div>
         <button onclick="generateAudio()">Generate Audio</button>
-        <button onclick="saveAudio()" id="save-btn" disabled>Save Audio</button>
+        <button onclick="saveAudio()" id="save-btn" disabled>
+          Save Audio (Single)
+        </button>
+        <button
+          onclick="downloadAllMulti()"
+          id="download-all-multi"
+          style="display: none"
+        >
+          Download All (Multi)
+        </button>
         <button onclick="clearLogs()">Clear Logs</button>
       </div>
 
-      <audio id="audio-player" controls style="display: none"></audio>
+      <div id="single-audio">
+        <audio id="audio-player" controls style="display: none"></audio>
+      </div>
+
+      <div id="multi-audios" class="hidden"></div>
 
       <label>Logs:</label>
       <div id="logs"></div>
     </div>
 
     <script>
-      let audioBlob = null; // Lưu Blob audio
+      let audioBlob = null; // Lưu Blob audio single
+      let multiBlobs = []; // Lưu array blobs cho multi
       const CONFIG_KEYS = {
         apiKey: "elevenlabs_api_key",
         voiceId: "elevenlabs_voice_id",
+        voicePo: "elevenlabs_voice_po",
+        voiceNana: "elevenlabs_voice_nana",
       };
       const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
       const API_URL = "https://api.elevenlabs.io/v1/text-to-speech/";
+      const LOCAL_KEYS = "apiKeys";
+      const LOCAL_INDEX = "apiCurrentIndex";
 
       // Hiển thị thông báo tùy chỉnh
       function showMessage(text, type = "info") {
@@ -185,13 +300,50 @@
         document.getElementById("message").style.display = "none";
       }
 
+      // Toggle mode UI
+      function toggleMode() {
+        const mode = document.querySelector(
+          'input[name="tts-mode"]:checked'
+        ).value;
+        const singleInputs = document.getElementById("single-mode-inputs");
+        const multiInputs = document.getElementById("multi-mode-inputs");
+        const textInput = document.getElementById("text-input");
+
+        if (mode === "single") {
+          singleInputs.classList.add("active");
+          multiInputs.classList.remove("active");
+          textInput.placeholder = 'Single: "Nhập văn bản cần đọc..."';
+        } else {
+          singleInputs.classList.remove("active");
+          multiInputs.classList.add("active");
+          textInput.placeholder = 'Multi: "Po: こんにちは;Nana: こんにちは"';
+        }
+
+        // Clear previous results khi switch mode
+        const multiDiv = document.getElementById("multi-audios");
+        const singleDiv = document.getElementById("single-audio");
+        multiDiv.classList.add("hidden");
+        singleDiv.classList.remove("hidden");
+        document.getElementById("audio-player").style.display = "none";
+        document.getElementById("save-btn").disabled = true;
+        document.getElementById("download-all-multi").style.display = "none";
+        multiBlobs = [];
+        audioBlob = null;
+      }
+
       // Load settings từ localStorage
       function loadSettings() {
         const apiKey = localStorage.getItem(CONFIG_KEYS.apiKey) || "";
         const voiceId =
           localStorage.getItem(CONFIG_KEYS.voiceId) || DEFAULT_VOICE_ID;
+        const voicePo =
+          localStorage.getItem(CONFIG_KEYS.voicePo) || DEFAULT_VOICE_ID;
+        const voiceNana =
+          localStorage.getItem(CONFIG_KEYS.voiceNana) || DEFAULT_VOICE_ID;
         document.getElementById("api-key").value = apiKey;
         document.getElementById("voice-id").value = voiceId;
+        document.getElementById("voice-po").value = voicePo;
+        document.getElementById("voice-nana").value = voiceNana;
         logMessage("INFO: Đã load settings từ localStorage.");
       }
 
@@ -199,38 +351,143 @@
       function saveSettings() {
         const apiKey = document.getElementById("api-key").value.trim();
         const voiceId = document.getElementById("voice-id").value.trim();
+        const voicePo = document.getElementById("voice-po").value.trim();
+        const voiceNana = document.getElementById("voice-nana").value.trim();
         localStorage.setItem(CONFIG_KEYS.apiKey, apiKey);
         localStorage.setItem(CONFIG_KEYS.voiceId, voiceId);
+        localStorage.setItem(CONFIG_KEYS.voicePo, voicePo);
+        localStorage.setItem(CONFIG_KEYS.voiceNana, voiceNana);
         logMessage("INFO: Đã lưu settings ngầm vào localStorage.");
       }
 
-      // Generate audio qua API
-      async function generateAudio() {
-        const apiKey = document.getElementById("api-key").value.trim();
-        const voiceId = document.getElementById("voice-id").value.trim();
-        const text = document.getElementById("text-input").value.trim();
-
-        if (!apiKey || !voiceId || !text) {
-          showMessage(
-            "Vui lòng nhập đầy đủ API Key, Voice ID và Text.",
-            "error"
-          );
-          logMessage("ERROR: Thiếu thông tin đầu vào.");
-          return;
-        }
-
-        // Lưu settings ngầm trước khi gọi
-        saveSettings();
-
-        logMessage("INFO: Bắt đầu gọi API ElevenLabs...");
-        document.getElementById("save-btn").disabled = true;
-
+      // Load API keys từ file
+      async function loadApiKeys(file) {
         try {
+          const text = await file.text();
+          const newKeys = text
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean);
+          if (newKeys.length === 0) {
+            showMessage("File không chứa API key hợp lệ.", "error");
+            return;
+          }
+          localStorage.setItem(LOCAL_KEYS, JSON.stringify(newKeys));
+          let index = parseInt(localStorage.getItem(LOCAL_INDEX) || "0");
+          if (index >= newKeys.length) {
+            index = 0;
+            localStorage.setItem(LOCAL_INDEX, "0");
+          }
+          logMessage(
+            `INFO: Loaded ${newKeys.length} API keys, starting from index ${index}.`
+          );
+          showMessage(
+            `Đã load ${newKeys.length} API keys, bắt đầu từ vị trí ${
+              index + 1
+            }.`,
+            "success"
+          );
+        } catch (error) {
+          logMessage(`ERROR: Lỗi load file: ${error.message}`);
+          showMessage("Lỗi đọc file TXT.", "error");
+        }
+      }
+
+      // Gọi API với fallback multi-key
+      async function callApiWithFallback(voiceId, text) {
+        saveSettings(); // Lưu settings trước
+        const singleApiKey = document.getElementById("api-key").value.trim();
+        const keysStr = localStorage.getItem(LOCAL_KEYS);
+        const keys = keysStr ? JSON.parse(keysStr) : [];
+        let currentIndex = parseInt(localStorage.getItem(LOCAL_INDEX) || "0");
+
+        if (keys.length > 0) {
+          // Multi-key mode
+          for (let i = currentIndex; i < keys.length; i++) {
+            const apiKey = keys[i];
+            logMessage(`INFO: Thử API key index ${i}...`);
+            try {
+              const response = await fetch(`${API_URL}${voiceId}`, {
+                method: "POST",
+                headers: {
+                  Accept: "audio/mpeg",
+                  "xi-api-key": apiKey,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  text: text,
+                  model_id: "eleven_v3",
+                  voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+                }),
+              });
+
+              // Xử lý quota/rate limit
+              if (response.status === 402 || response.status === 429) {
+                let errorMsg =
+                  response.status === 402 ? "Hết credit" : "Rate limit";
+                logMessage(
+                  `ERROR: Key ${i} - ${errorMsg} (Mã: ${response.status}), thử key tiếp theo...`
+                );
+                if (i < keys.length - 1) {
+                  continue;
+                } else {
+                  throw new Error(`Tất cả keys hết quota (402/429).`);
+                }
+              }
+
+              if (!response.ok) {
+                let errorDetail = "";
+                try {
+                  const errorJson = await response.json();
+                  if (errorJson.error === "quota_exceeded") {
+                    errorDetail = `Quota exceeded cho key ${i}.`;
+                    logMessage(
+                      `ERROR: Key ${i} quota exceeded, thử key tiếp theo...`
+                    );
+                    if (i < keys.length - 1) {
+                      continue;
+                    } else {
+                      throw new Error("Tất cả keys hết quota.");
+                    }
+                  } else {
+                    errorDetail = JSON.stringify(errorJson);
+                    throw new Error(`API error: ${errorDetail}`);
+                  }
+                } catch {
+                  errorDetail = await response.text();
+                  throw new Error(
+                    `API error ${response.status}: ${errorDetail}`
+                  );
+                }
+              }
+
+              // Success
+              localStorage.setItem(LOCAL_INDEX, (i + 1).toString());
+              logMessage(`SUCCESS: Sử dụng key index ${i} thành công.`);
+              return await response.blob();
+            } catch (error) {
+              if (error.message.includes("quota") && i < keys.length - 1) {
+                continue;
+              } else {
+                logMessage(`ERROR: Key ${i} thất bại: ${error.message}`);
+                if (i === keys.length - 1) {
+                  throw error;
+                }
+              }
+            }
+          }
+          throw new Error("Không có API key nào hoạt động.");
+        } else {
+          // Single key mode
+          if (!singleApiKey) {
+            throw new Error("Không có API key.");
+          }
+          logMessage("INFO: Sử dụng single API key...");
           const response = await fetch(`${API_URL}${voiceId}`, {
             method: "POST",
             headers: {
               Accept: "audio/mpeg",
-              "xi-api-key": apiKey,
+              "xi-api-key": singleApiKey,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -240,18 +497,10 @@
             }),
           });
 
-          // Xử lý lỗi quota/rate limit
           if (response.status === 402) {
-            const errorMsg =
-              "Hết credit! Vui lòng cập nhật API key hoặc kiểm tra quota tại elevenlabs.io.";
-            logMessage(`ERROR: ${errorMsg} (Mã lỗi: 402 Payment Required)`);
-            showMessage(errorMsg, "error");
-            return;
+            throw new Error("Hết credit! (402)");
           } else if (response.status === 429) {
-            const errorMsg = "Rate limit exceeded! Đợi một lúc rồi thử lại.";
-            logMessage(`ERROR: ${errorMsg} (Mã lỗi: 429)`);
-            showMessage(errorMsg, "error");
-            return;
+            throw new Error("Rate limit! (429)");
           }
 
           if (!response.ok) {
@@ -259,62 +508,194 @@
             try {
               const errorJson = await response.json();
               if (errorJson.error === "quota_exceeded") {
-                errorDetail = `Quota exceeded! Hết credit. Chi tiết: ${
-                  errorJson.message || "N/A"
-                }`;
+                errorDetail = "Quota exceeded!";
+                throw new Error(errorDetail);
               } else {
                 errorDetail = JSON.stringify(errorJson);
               }
             } catch {
               errorDetail = await response.text();
             }
-            logMessage(`ERROR: Lỗi API - ${response.status}: ${errorDetail}`);
-            showMessage(
-              `Lỗi API (${response.status}): ${errorDetail}`,
-              "error"
-            );
-            return;
+            throw new Error(`API error ${response.status}: ${errorDetail}`);
           }
 
-          // Lấy audio Blob
-          audioBlob = await response.blob();
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const audioPlayer = document.getElementById("audio-player");
-          audioPlayer.src = audioUrl;
-          audioPlayer.style.display = "block";
-          document.getElementById("save-btn").disabled = false;
-
-          logMessage("INFO: Tạo audio thành công. Sử dụng player để nghe.");
-          showMessage(
-            "Audio được tạo thành công! Sử dụng player để nghe.",
-            "success"
-          );
-        } catch (error) {
-          logMessage(
-            `ERROR: Lỗi kết nối - ${error.message} (Kiểm tra mạng hoặc API key)`
-          );
-          showMessage(`Lỗi kết nối: ${error.message}`, "error");
+          return await response.blob();
         }
       }
 
-      // Save audio
+      // Parse segments cho multi-speaker
+      function parseSegments(input) {
+        if (!input.trim()) return [];
+        const parts = input
+          .split(";")
+          .map((p) => p.trim())
+          .filter(Boolean);
+        const segments = [];
+        for (let part of parts) {
+          const colonIndex = part.indexOf(":");
+          if (colonIndex === -1) {
+            logMessage(`WARNING: Bỏ qua phần không hợp lệ: ${part}`);
+            continue;
+          }
+          const speaker = part.substring(0, colonIndex).trim().toLowerCase();
+          const text = part.substring(colonIndex + 1).trim();
+          if (speaker === "po" || speaker === "nana") {
+            segments.push({ speaker: speaker.toUpperCase(), text });
+          } else {
+            logMessage(
+              `ERROR: Speaker không hỗ trợ: ${speaker}. Chỉ hỗ trợ Po hoặc Nana.`
+            );
+            showMessage(
+              `Speaker không hợp lệ: ${speaker}. Chỉ Po/Nana.`,
+              "error"
+            );
+            return [];
+          }
+        }
+        if (segments.length === 0) {
+          showMessage("Không có segment hợp lệ trong multi mode.", "error");
+        }
+        return segments;
+      }
+
+      // Hiển thị multi audios
+      function displayMultiAudios(blobs) {
+        multiBlobs = blobs;
+        const multiDiv = document.getElementById("multi-audios");
+        const singleDiv = document.getElementById("single-audio");
+        multiDiv.innerHTML = "";
+        multiDiv.classList.remove("hidden");
+        singleDiv.classList.add("hidden");
+        document.getElementById("save-btn").disabled = true;
+        document.getElementById("download-all-multi").style.display =
+          "inline-block";
+
+        blobs.forEach((blob, index) => {
+          const segmentDiv = document.createElement("div");
+          segmentDiv.className = "multi-segment";
+          const audio = document.createElement("audio");
+          audio.className = "multi-audio";
+          audio.src = URL.createObjectURL(blob);
+          audio.controls = true;
+          segmentDiv.appendChild(audio);
+
+          const downloadBtn = document.createElement("button");
+          downloadBtn.textContent = `Download audio${index + 1}.mp3`;
+          downloadBtn.onclick = () =>
+            downloadBlob(blob, `audio${index + 1}.mp3`);
+          segmentDiv.appendChild(downloadBtn);
+
+          multiDiv.appendChild(segmentDiv);
+        });
+
+        logMessage(`SUCCESS: Tạo ${blobs.length} audio segments thành công.`);
+        showMessage("Multi-audio được tạo thành công!", "success");
+      }
+
+      // Generate audio (single hoặc multi)
+      async function generateAudio() {
+        const mode = document.querySelector(
+          'input[name="tts-mode"]:checked'
+        ).value;
+        const text = document.getElementById("text-input").value.trim();
+        if (!text) {
+          showMessage("Vui lòng nhập text.", "error");
+          return;
+        }
+
+        logMessage("INFO: Bắt đầu generate audio...");
+        document.getElementById("save-btn").disabled = true;
+        document.getElementById("download-all-multi").style.display = "none";
+
+        try {
+          if (mode === "single") {
+            // Single mode
+            const voiceId = document.getElementById("voice-id").value.trim();
+            if (!voiceId) {
+              showMessage("Vui lòng nhập Voice ID cho single mode.", "error");
+              return;
+            }
+            audioBlob = await callApiWithFallback(voiceId, text);
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audioPlayer = document.getElementById("audio-player");
+            audioPlayer.src = audioUrl;
+            audioPlayer.style.display = "block";
+            document.getElementById("save-btn").disabled = false;
+
+            const multiDiv = document.getElementById("multi-audios");
+            const singleDiv = document.getElementById("single-audio");
+            multiDiv.classList.add("hidden");
+            singleDiv.classList.remove("hidden");
+
+            logMessage("INFO: Tạo single audio thành công.");
+            showMessage("Single audio được tạo thành công!", "success");
+          } else {
+            // Multi mode
+            const segments = parseSegments(text);
+            if (segments.length === 0) return;
+
+            const voicePo = document.getElementById("voice-po").value.trim();
+            const voiceNana = document
+              .getElementById("voice-nana")
+              .value.trim();
+            if (!voicePo || !voiceNana) {
+              showMessage("Vui lòng nhập Voice ID cho Po và Nana.", "error");
+              return;
+            }
+            const blobs = [];
+            for (let seg of segments) {
+              const voiceId = seg.speaker === "PO" ? voicePo : voiceNana;
+              logMessage(
+                `INFO: Generate cho ${seg.speaker}: "${seg.text.substring(
+                  0,
+                  50
+                )}..."`
+              );
+              const blob = await callApiWithFallback(voiceId, seg.text);
+              blobs.push(blob);
+            }
+            displayMultiAudios(blobs);
+          }
+        } catch (error) {
+          logMessage(`ERROR: Generate thất bại - ${error.message}`);
+          showMessage(`Lỗi: ${error.message}`, "error");
+        }
+      }
+
+      // Download single audio
       function saveAudio() {
         if (!audioBlob) {
           showMessage("Chưa có audio để lưu. Hãy Generate trước.", "error");
           return;
         }
+        downloadBlob(audioBlob, "output.mp3");
+        logMessage("INFO: Đã tải single audio (output.mp3)");
+        showMessage("Single audio đã lưu!", "success");
+      }
 
-        const url = URL.createObjectURL(audioBlob);
+      // Download blob
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "output.mp3"; // Tên file mặc định
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+      }
 
-        logMessage("INFO: Đã tải audio về (output.mp3)");
-        showMessage("Audio đã lưu thành công!", "success");
+      // Download all multi
+      function downloadAllMulti() {
+        if (multiBlobs.length === 0) {
+          showMessage("Chưa có multi audios.", "error");
+          return;
+        }
+        multiBlobs.forEach((blob, index) => {
+          downloadBlob(blob, `audio${index + 1}.mp3`);
+        });
+        logMessage(`INFO: Bắt đầu tải tất cả ${multiBlobs.length} audios.`);
+        showMessage("Đang tải tất cả audios...", "info");
       }
 
       // Log message vào #logs
@@ -325,7 +706,6 @@
         logsDiv.textContent += entry;
         logsDiv.scrollTop = logsDiv.scrollHeight;
         console.log(`[${type.toUpperCase()}] ${msg}`);
-        if (type === "error") logsDiv.classList.add("error");
       }
 
       // Clear logs
@@ -334,9 +714,24 @@
         logMessage("INFO: Đã xóa logs.");
       }
 
+      // Event listeners
+      document.querySelectorAll('input[name="tts-mode"]').forEach((radio) => {
+        radio.addEventListener("change", toggleMode);
+      });
+
+      document
+        .getElementById("apikey-file")
+        .addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            await loadApiKeys(file);
+          }
+        });
+
       // Khởi tạo khi load trang
       window.onload = function () {
         loadSettings();
+        toggleMode(); // Set initial UI
         logMessage("INFO: App đã khởi động.");
       };
     </script>
